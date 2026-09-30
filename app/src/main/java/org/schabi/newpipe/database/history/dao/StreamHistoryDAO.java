@@ -47,6 +47,7 @@ public abstract class StreamHistoryDAO implements HistoryDAO<StreamHistoryEntity
         throw new UnsupportedOperationException();
     }
 
+    @RewriteQueriesToDropUnusedColumns
     @Query("SELECT * FROM " + STREAM_TABLE
             + " INNER JOIN " + STREAM_HISTORY_TABLE
             + " ON " + STREAM_ID + " = " + JOIN_STREAM_ID
@@ -54,6 +55,7 @@ public abstract class StreamHistoryDAO implements HistoryDAO<StreamHistoryEntity
     public abstract Flowable<List<StreamHistoryEntry>> getHistory();
 
 
+    @RewriteQueriesToDropUnusedColumns
     @Query("SELECT * FROM " + STREAM_TABLE
             + " INNER JOIN " + STREAM_HISTORY_TABLE
             + " ON " + STREAM_ID + " = " + JOIN_STREAM_ID

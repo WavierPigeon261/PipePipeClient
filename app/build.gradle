@@ -61,7 +61,7 @@ android {
             debuggable true
 
             // suffix the app id and the app name with git branch name
-            def workingBranch = getGitWorkingBranch()
+            def workingBranch = getGitWorkingBranch(project)
             def normalizedWorkingBranch = workingBranch.replaceFirst("^[^A-Za-z]+", "").replaceAll("[^0-9A-Za-z]+", "")
             if (true) {
                 // default values when branch name could not be determined or is master or dev
@@ -299,18 +299,13 @@ dependencies {
     androidTestImplementation 'org.bouncycastle:bcprov-jdk18on:1.85'
 }
 
-static String getGitWorkingBranch() {
+static String getGitWorkingBranch(project) {
     try {
-        def gitProcess = "git rev-parse --abbrev-ref HEAD".execute()
-        gitProcess.waitFor()
-        if (gitProcess.exitValue() == 0) {
-            return gitProcess.text.trim()
-        } else {
-            // not a git repository
-            return ""
-        }
-    } catch (IOException ignored) {
-        // git was not found
+        return project.providers.exec {
+            commandLine "git", "rev-parse", "--abbrev-ref", "HEAD"
+            ignoreExitValue = true
+        }.standardOutput.asText.getOrElse("").trim()
+    } catch (Exception ignored) {
         return ""
     }
 }
