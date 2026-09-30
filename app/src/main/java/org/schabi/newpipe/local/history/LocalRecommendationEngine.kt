@@ -47,7 +47,7 @@ class LocalRecommendationEngine(
         }
 
         val maxChannelWeight = channelWeights.values.maxOrNull() ?: 1.0
-    val maxTagWeight = tagWeights.values.maxOrNull() ?: 1.0
+        val maxTagWeight = tagWeights.values.maxOrNull() ?: 1.0
 
         return candidates
             .asSequence()

@@ -436,6 +436,10 @@ public final class Migrations {
             database.execSQL("ALTER TABLE `stream_history` ADD COLUMN `tags_json` TEXT");
             database.execSQL("ALTER TABLE `stream_history` ADD COLUMN `last_position_ms` INTEGER NOT NULL DEFAULT 0");
             database.execSQL("ALTER TABLE `stream_history` ADD COLUMN `completion_ratio` REAL NOT NULL DEFAULT 0");
+                        database.execSQL("UPDATE `stream_history` SET `channel_url` = "
+                                        + "(SELECT `uploader_url` FROM `streams` "
+                                        + "WHERE `streams`.`uid` = `stream_history`.`stream_id`) "
+                                        + "WHERE `channel_url` IS NULL");
         }
     };
 

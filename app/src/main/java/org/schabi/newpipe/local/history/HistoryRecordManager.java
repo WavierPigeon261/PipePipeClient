@@ -171,7 +171,7 @@ public class HistoryRecordManager {
 
         final long watchedThresholdMs = 30_000L;
         final double completionRatio = totalDurationMs > 0
-                ? (watchedMs / (double) totalDurationMs)
+            ? Math.max(0.0d, Math.min(1.0d, watchedMs / (double) totalDurationMs))
                 : 0.0d;
 
         if (watchedMs < watchedThresholdMs && completionRatio < 0.5d) {
