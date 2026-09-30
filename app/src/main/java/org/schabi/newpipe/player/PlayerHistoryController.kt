@@ -43,6 +43,12 @@ class PlayerHistoryController(private val player: Player) {
         }
 
         databaseUpdateDisposable.add(
+            recordManager.recordWatchSession(info, progressMillis, info.duration * 1000)
+                .onErrorComplete()
+                .subscribe()
+        )
+
+        databaseUpdateDisposable.add(
             recordManager.saveStreamState(info, progressMillis)
                 .observeOn(AndroidSchedulers.mainThread())
                 .doOnError { e ->

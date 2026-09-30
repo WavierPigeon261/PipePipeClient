@@ -9,12 +9,14 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.preference.PreferenceManager
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Flowable
-import io.reactivex.rxjava3.functions.Function4
+import io.reactivex.rxjava3.functions.Function5
 import io.reactivex.rxjava3.processors.BehaviorProcessor
 import io.reactivex.rxjava3.schedulers.Schedulers
 import org.schabi.newpipe.R
 import org.schabi.newpipe.database.feed.model.FeedGroupEntity
+import org.schabi.newpipe.database.history.model.StreamHistoryEntity
 import org.schabi.newpipe.database.stream.StreamWithState
+import org.schabi.newpipe.local.history.LocalRecommendationEngine
 import org.schabi.newpipe.local.feed.item.StreamItem
 import org.schabi.newpipe.local.feed.service.FeedEventManager
 import org.schabi.newpipe.local.feed.service.FeedEventManager.Event.ErrorResultEvent
@@ -46,22 +48,34 @@ class FeedViewModel(
             toggleShowPlayedItemsFlowable,
             feedDatabaseManager.notLoadedCount(groupId),
             feedDatabaseManager.oldestSubscriptionUpdate(groupId),
+            feedDatabaseManager.database().streamHistoryDAO().getAll(),
 
-            Function4 { t1: FeedEventManager.Event, t2: Boolean,
-                t3: Long, t4: List<OffsetDateTime> ->
-                return@Function4 CombineResultEventHolder(t1, t2, t3, t4.firstOrNull())
+            Function5 { t1: FeedEventManager.Event, t2: Boolean,
+                t3: Long, t4: List<OffsetDateTime>, t5: List<StreamHistoryEntity> ->
+                return@Function5 CombineResultEventHolder(t1, t2, t3, t4.firstOrNull(), t5)
             }
         )
         .throttleLatest(DEFAULT_THROTTLE_TIMEOUT, TimeUnit.MILLISECONDS)
         .subscribeOn(Schedulers.io())
         .observeOn(Schedulers.io())
-        .map { (event, showPlayedItems, notLoadedCount, oldestUpdate) ->
-            val streamItems = if (event is SuccessResultEvent || event is IdleEvent)
+        .map { (event, showPlayedItems, notLoadedCount, oldestUpdate, historyEntries) ->
+            val streamItems = if (event is SuccessResultEvent || event is IdleEvent) {
                 feedDatabaseManager
                     .getStreams(groupId, showPlayedItems)
                     .blockingGet(arrayListOf())
-            else
+                    .let { streams ->
+                        val recommendedOrder = LocalRecommendationEngine(historyEntries)
+                            .rankStreams(streams.map { it.stream })
+                            .mapIndexed { index, stream -> stream.uid to index }
+                            .toMap()
+
+                        streams.sortedBy { stream ->
+                            recommendedOrder[stream.stream.uid] ?: Int.MAX_VALUE
+                        }
+                    }
+            } else {
                 arrayListOf()
+            }
 
             CombineResultDataHolder(event, streamItems, notLoadedCount, oldestUpdate)
         }
@@ -90,7 +104,8 @@ class FeedViewModel(
         val t1: FeedEventManager.Event,
         val t2: Boolean,
         val t3: Long,
-        val t4: OffsetDateTime?
+        val t4: OffsetDateTime?,
+        val t5: List<StreamHistoryEntity>
     )
 
     private data class CombineResultDataHolder(

@@ -49,6 +49,8 @@ import org.schabi.newpipe.player.mediaitem.ExtractorStreamInfoResolver;
 import org.schabi.newpipe.player.mediaitem.PlayerMediaItem;
 import org.schabi.newpipe.util.ExtractorHelper;
 
+import java.util.Collections;
+
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -157,6 +159,53 @@ public class HistoryRecordManager {
                 // just viewed for the first time: set 1 view
                 return streamHistoryTable.insert(new StreamHistoryEntity(streamId, currentTime, 1));
             }
+        })).subscribeOn(Schedulers.io());
+    }
+
+    public Maybe<Long> recordWatchSession(final StreamInfo info,
+                                        final long watchedMs,
+                                        final long totalDurationMs) {
+        if (!isStreamHistoryEnabled()) {
+            return Maybe.empty();
+        }
+
+        final long watchedThresholdMs = 30_000L;
+        final double completionRatio = totalDurationMs > 0
+                ? (watchedMs / (double) totalDurationMs)
+                : 0.0d;
+
+        if (watchedMs < watchedThresholdMs && completionRatio < 0.5d) {
+            return Maybe.empty();
+        }
+
+        final OffsetDateTime currentTime = OffsetDateTime.now(ZoneOffset.UTC);
+        final String channelId = WatchHistoryMetadata.channelIdFrom(info.getUploaderUrl(), info.getUploaderName());
+        final String channelUrl = info.getUploaderUrl();
+        final String tagsJson = WatchHistoryMetadata.tagsJson(info.getTags());
+
+        return Maybe.fromCallable(() -> database.runInTransaction(() -> {
+            final long streamId = streamTable.upsert(new StreamEntity(info));
+            final StreamHistoryEntity latestEntry = streamHistoryTable.getLatestEntry(streamId);
+
+            if (latestEntry != null) {
+                latestEntry.setChannelId(channelId);
+                latestEntry.setChannelUrl(channelUrl);
+                latestEntry.setTagsJson(tagsJson);
+                latestEntry.setLastPositionMs(watchedMs);
+                latestEntry.setCompletionRatio(completionRatio);
+                return streamHistoryTable.update(latestEntry) > 0 ? streamId : 0L;
+            }
+
+            return streamHistoryTable.insert(new StreamHistoryEntity(
+                    streamId,
+                    currentTime,
+                    1,
+                    channelId,
+                    channelUrl,
+                    tagsJson,
+                    watchedMs,
+                    completionRatio
+            ));
         })).subscribeOn(Schedulers.io());
     }
 

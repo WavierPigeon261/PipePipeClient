@@ -30,6 +30,11 @@ public class StreamHistoryEntity {
     public static final String JOIN_STREAM_ID = "stream_id";
     public static final String STREAM_ACCESS_DATE = "access_date";
     public static final String STREAM_REPEAT_COUNT = "repeat_count";
+    public static final String STREAM_CHANNEL_ID = "channel_id";
+    public static final String STREAM_CHANNEL_URL = "channel_url";
+    public static final String STREAM_TAGS = "tags_json";
+    public static final String STREAM_LAST_POSITION_MS = "last_position_ms";
+    public static final String STREAM_COMPLETION_RATIO = "completion_ratio";
 
     @ColumnInfo(name = JOIN_STREAM_ID)
     private long streamUid;
@@ -41,6 +46,21 @@ public class StreamHistoryEntity {
     @ColumnInfo(name = STREAM_REPEAT_COUNT)
     private long repeatCount;
 
+    @ColumnInfo(name = STREAM_CHANNEL_ID)
+    private String channelId;
+
+    @ColumnInfo(name = STREAM_CHANNEL_URL)
+    private String channelUrl;
+
+    @ColumnInfo(name = STREAM_TAGS)
+    private String tagsJson;
+
+    @ColumnInfo(name = STREAM_LAST_POSITION_MS)
+    private long lastPositionMs;
+
+    @ColumnInfo(name = STREAM_COMPLETION_RATIO)
+    private double completionRatio;
+
     /**
      * @param streamUid the stream id this history item will refer to
      * @param accessDate the last time the stream was accessed
@@ -49,9 +69,25 @@ public class StreamHistoryEntity {
     public StreamHistoryEntity(final long streamUid,
                                @NonNull final OffsetDateTime accessDate,
                                final long repeatCount) {
+        this(streamUid, accessDate, repeatCount, null, null, null, 0L, 0.0d);
+    }
+
+    public StreamHistoryEntity(final long streamUid,
+                               @NonNull final OffsetDateTime accessDate,
+                               final long repeatCount,
+                               final String channelId,
+                               final String channelUrl,
+                               final String tagsJson,
+                               final long lastPositionMs,
+                               final double completionRatio) {
         this.streamUid = streamUid;
         this.accessDate = accessDate;
         this.repeatCount = repeatCount;
+        this.channelId = channelId;
+        this.channelUrl = channelUrl;
+        this.tagsJson = tagsJson;
+        this.lastPositionMs = lastPositionMs;
+        this.completionRatio = completionRatio;
     }
 
     public long getStreamUid() {
@@ -77,5 +113,45 @@ public class StreamHistoryEntity {
 
     public void setRepeatCount(final long repeatCount) {
         this.repeatCount = repeatCount;
+    }
+
+    public String getChannelId() {
+        return channelId;
+    }
+
+    public void setChannelId(final String channelId) {
+        this.channelId = channelId;
+    }
+
+    public String getChannelUrl() {
+        return channelUrl;
+    }
+
+    public void setChannelUrl(final String channelUrl) {
+        this.channelUrl = channelUrl;
+    }
+
+    public String getTagsJson() {
+        return tagsJson;
+    }
+
+    public void setTagsJson(final String tagsJson) {
+        this.tagsJson = tagsJson;
+    }
+
+    public long getLastPositionMs() {
+        return lastPositionMs;
+    }
+
+    public void setLastPositionMs(final long lastPositionMs) {
+        this.lastPositionMs = lastPositionMs;
+    }
+
+    public double getCompletionRatio() {
+        return completionRatio;
+    }
+
+    public void setCompletionRatio(final double completionRatio) {
+        this.completionRatio = completionRatio;
     }
 }

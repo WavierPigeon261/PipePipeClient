@@ -39,7 +39,7 @@ import org.schabi.newpipe.database.subscription.SubscriptionEntity;
                 FeedEntity.class, FeedGroupEntity.class, FeedGroupSubscriptionEntity.class,
                 FeedLastUpdatedEntity.class
         },
-        version = DB_VER_901
+        version = DB_VER_902
 )
 public abstract class AppDatabase extends RoomDatabase {
     public static final String DATABASE_NAME = "newpipe.db";
