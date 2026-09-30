@@ -2,6 +2,7 @@ package org.schabi.newpipe.database;
 
 import static org.schabi.newpipe.database.Migrations.DB_VER_6;
 import static org.schabi.newpipe.database.Migrations.DB_VER_901;
+import static org.schabi.newpipe.database.Migrations.DB_VER_902;
 
 import androidx.room.Database;
 import androidx.room.RoomDatabase;
