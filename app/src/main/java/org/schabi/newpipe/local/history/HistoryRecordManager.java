@@ -179,9 +179,10 @@ public class HistoryRecordManager {
         }
 
         final OffsetDateTime currentTime = OffsetDateTime.now(ZoneOffset.UTC);
-        final String channelId = WatchHistoryMetadata.channelIdFrom(info.getUploaderUrl(), info.getUploaderName());
+        WatchHistoryMetadata metadata = new WatchHistoryMetadata();
+        final String channelId = metadata.channelIdFrom(info.getUploaderUrl(), info.getUploaderName());
         final String channelUrl = info.getUploaderUrl();
-        final String tagsJson = WatchHistoryMetadata.tagsJson(info.getTags());
+        final String tagsJson = metadata.tagsJson(info.getTags());
 
         return Maybe.fromCallable(() -> database.runInTransaction(() -> {
             final long streamId = streamTable.upsert(new StreamEntity(info));
