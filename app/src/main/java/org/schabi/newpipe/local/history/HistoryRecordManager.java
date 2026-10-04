@@ -182,7 +182,9 @@ public class HistoryRecordManager {
         final String channelUrl = info.getUploaderUrl();
         final String tagsJson = WatchHistoryMetadata.tagsJson(info.getTags());
 
-        return Maybe.fromCallable(() -> database.runInTransaction(() -> {
+        return Maybe.fromCallable(() -> {
+            final OffsetDateTime currentTime = OffsetDateTime.now(ZoneOffset.UTC);
+            return database.runInTransaction(() -> {
             final long streamId = streamTable.upsert(new StreamEntity(info));
             final StreamHistoryEntity latestEntry = streamHistoryTable.getLatestEntry(streamId);
 
