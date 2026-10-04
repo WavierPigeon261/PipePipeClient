@@ -207,8 +207,8 @@ public class HistoryRecordManager {
                     watchedMs,
                     completionRatio
             ));
-        })).subscribeOn(Schedulers.io());
-    }
+        });
+    })).subscribeOn(Schedulers.io());
 
     public Completable deleteStreamHistoryAndState(final long streamId) {
         return Completable.fromAction(() -> database.runInTransaction(() -> {
