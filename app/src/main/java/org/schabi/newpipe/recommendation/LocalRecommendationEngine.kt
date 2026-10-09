@@ -116,7 +116,7 @@ class LocalRecommendationEngine(
         }
         val weightedHistory = history.map { it.toStreamHistoryEntity() }
         val channels = channelWeights(weightedHistory)
-        val tags = tagWeights(history.take(TAG_HISTORY_LIMIT))
+        val tags = tagWeights(weightedHistory.take(TAG_HISTORY_LIMIT))
         val maxChannel = channels.values.maxOrNull()?.takeIf { it > 0.0 } ?: 1.0
         val maxTag = tags.values.maxOrNull()?.takeIf { it > 0.0 } ?: 1.0
 

@@ -3,6 +3,7 @@ package org.schabi.newpipe.local.feed.item
 import android.content.Context
 import android.text.TextUtils
 import android.view.View
+import android.widget.ImageView
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import com.xwray.groupie.viewbinding.BindableItem
@@ -108,8 +109,9 @@ data class StreamItem(
 
         PicassoHelper.loadScaledDownThumbnail(viewBinding.root.context, stream.thumbnailUrl)
             .into(viewBinding.itemThumbnailView)
-        PicassoHelper.loadAvatar(stream.uploaderAvatarUrl)
-            .into(viewBinding.itemChannelAvatarView)
+        viewBinding.root.findViewById<ImageView>(R.id.itemChannelAvatarView)?.let { avatarView ->
+            PicassoHelper.loadAvatar(stream.uploaderAvatarUrl).into(avatarView)
+        }
 
         viewBinding.itemAdditionalDetails.text =
             getStreamInfoDetailLine(viewBinding.itemAdditionalDetails.context)
