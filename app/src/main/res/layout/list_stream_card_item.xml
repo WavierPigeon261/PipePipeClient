@@ -58,33 +58,47 @@
         app:layout_constraintTop_toBottomOf="@id/itemThumbnailView"
         tools:text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc tristique vitae sem vitae blanditLorem ipsumLorem ipsumLorem ipsumLorem ipsumLorem ipsumLorem ipsumLorem ipsum" />
 
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/itemChannelAvatarView"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="2dp"
+        android:layout_marginTop="@dimen/spacing_micro"
+        android:contentDescription="@null"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_account_circle"
+        app:shapeAppearanceOverlay="@style/CircularImageView"
+        app:layout_constraintStart_toStartOf="@id/itemThumbnailView"
+        app:layout_constraintTop_toBottomOf="@id/itemVideoTitleView" />
+
     <org.schabi.newpipe.views.NewPipeTextView
         android:id="@+id/itemUploaderView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_small"
         android:layout_marginTop="@dimen/spacing_micro"
         android:layout_marginEnd="@dimen/margin_small"
         android:ellipsize="end"
         android:lines="1"
         android:includeFontPadding="false"
         android:textAppearance="?android:textAppearanceSmall"
-        app:layout_constraintEnd_toStartOf="@id/itemAdditionalDetails"
-        app:layout_constraintStart_toStartOf="@id/itemVideoTitleView"
-        app:layout_constraintTop_toBottomOf="@+id/itemVideoTitleView"
+        app:layout_constraintEnd_toEndOf="@id/itemThumbnailView"
+        app:layout_constraintStart_toEndOf="@id/itemChannelAvatarView"
+        app:layout_constraintTop_toBottomOf="@id/itemVideoTitleView"
         tools:text="Uploader" />
 
     <org.schabi.newpipe.views.NewPipeTextView
         android:id="@+id/itemAdditionalDetails"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_small"
         android:ellipsize="end"
         android:lines="1"
         android:includeFontPadding="false"
         android:textAppearance="?android:textAppearanceSmall"
-        app:layout_constraintBottom_toBottomOf="@id/itemUploaderView"
-        app:layout_constraintEnd_toEndOf="@+id/itemVideoTitleView"
-        app:layout_constraintStart_toEndOf="@id/itemUploaderView"
-        app:layout_constraintTop_toTopOf="@id/itemUploaderView"
+        app:layout_constraintEnd_toEndOf="@id/itemVideoTitleView"
+        app:layout_constraintStart_toStartOf="@id/itemUploaderView"
+        app:layout_constraintTop_toBottomOf="@id/itemUploaderView"
         tools:text="2 years ago • 10M views" />
 
     <org.schabi.newpipe.views.AnimatedProgressBar
@@ -106,7 +120,8 @@
         android:scaleType="center"
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="@id/itemThumbnailView"
-        app:layout_constraintTop_toBottomOf="@id/itemThumbnailView"
+        app:layout_constraintBottom_toBottomOf="@id/itemAdditionalDetails"
+        app:layout_constraintTop_toTopOf="@id/itemAdditionalDetails"
         app:srcCompat="@drawable/ic_drag_handle"
         tools:ignore="RtlHardcoded,RtlSymmetry" />
 

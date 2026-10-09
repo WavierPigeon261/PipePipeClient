@@ -33,6 +33,28 @@ object WatchHistoryMetadata {
             ?.toList()
             ?: return null
 
-        return if (normalized.isEmpty()) null else normalized.joinToString(",")
+        if (normalized.isEmpty()) {
+            return null
+        }
+        return normalized.joinToString(prefix = "[", postfix = "]") { tag ->
+            "\"" + tag
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\b", "\\b")
+                .replace("\u000C", "\\f")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t") + "\""
+        }
+    }
+
+    @JvmStatic
+    fun qualifiesForRecommendationHistory(watchedMs: Long, totalDurationMs: Long): Boolean {
+        val completionRatio = if (totalDurationMs > 0) {
+            watchedMs.toDouble() / totalDurationMs
+        } else {
+            0.0
+        }
+        return watchedMs > 30_000L || completionRatio > 0.5
     }
 }

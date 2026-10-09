@@ -44,4 +44,20 @@ class LocalRecommendationEngineTest {
         assertEquals("https://example.com/watch/new", recommended.first().url)
         assertTrue(recommended.none { it.url == "https://example.com/watch/seen" })
     }
+
+    @Test
+    fun `uses recent history and ranks tag matches with exponential decay`() {
+        val now = OffsetDateTime.parse("2026-09-30T12:00:00Z")
+        val history = listOf(
+            StreamHistoryEntity(1, now.minusDays(2), 1, "channel-1", null, "[\"astronomy\"]", 40_000, 0.6),
+            StreamHistoryEntity(2, now.minusDays(27), 1, "channel-2", null, "[\"cooking\"]", 40_000, 0.6),
+        )
+        val engine = LocalRecommendationEngine(history, now)
+        val candidates = listOf(
+            StreamEntity(uid = 3, serviceId = 0, url = "https://example.com/space", title = "Astronomy discoveries", streamType = org.schabi.newpipe.extractor.stream.StreamType.VIDEO_STREAM, duration = 240, uploader = "Science", uploaderUrl = null, thumbnailUrl = null),
+            StreamEntity(uid = 4, serviceId = 0, url = "https://example.com/food", title = "Cooking at home", streamType = org.schabi.newpipe.extractor.stream.StreamType.VIDEO_STREAM, duration = 240, uploader = "Kitchen", uploaderUrl = null, thumbnailUrl = null),
+        )
+
+        assertEquals(3L, engine.rankStreams(candidates).first().uid)
+    }
 }

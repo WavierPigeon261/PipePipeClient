@@ -169,12 +169,11 @@ public class HistoryRecordManager {
             return Maybe.empty();
         }
 
-        final long watchedThresholdMs = 30_000L;
         final double completionRatio = totalDurationMs > 0
             ? Math.max(0.0d, Math.min(1.0d, watchedMs / (double) totalDurationMs))
                 : 0.0d;
 
-        if (watchedMs < watchedThresholdMs && completionRatio < 0.5d) {
+        if (!WatchHistoryMetadata.qualifiesForRecommendationHistory(watchedMs, totalDurationMs)) {
             return Maybe.empty();
         }
 
@@ -189,9 +188,16 @@ public class HistoryRecordManager {
             final StreamHistoryEntity latestEntry = streamHistoryTable.getLatestEntry(streamId);
 
             if (latestEntry != null) {
-                latestEntry.setChannelId(channelId);
-                latestEntry.setChannelUrl(channelUrl);
-                latestEntry.setTagsJson(tagsJson);
+                latestEntry.setAccessDate(currentTime);
+                if (channelId != null) {
+                    latestEntry.setChannelId(channelId);
+                }
+                if (channelUrl != null) {
+                    latestEntry.setChannelUrl(channelUrl);
+                }
+                if (tagsJson != null) {
+                    latestEntry.setTagsJson(tagsJson);
+                }
                 latestEntry.setLastPositionMs(watchedMs);
                 latestEntry.setCompletionRatio(completionRatio);
                 return streamHistoryTable.update(latestEntry) > 0 ? streamId : 0L;

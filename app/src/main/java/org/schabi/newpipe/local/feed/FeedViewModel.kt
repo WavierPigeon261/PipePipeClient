@@ -1,6 +1,7 @@
 package org.schabi.newpipe.local.feed
 
 import android.content.Context
+import android.util.Log
 import androidx.core.content.edit
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -16,13 +17,14 @@ import org.schabi.newpipe.R
 import org.schabi.newpipe.database.feed.model.FeedGroupEntity
 import org.schabi.newpipe.database.history.model.StreamHistoryEntity
 import org.schabi.newpipe.database.stream.StreamWithState
-import org.schabi.newpipe.local.history.LocalRecommendationEngine
+import org.schabi.newpipe.database.stream.model.StreamEntity
 import org.schabi.newpipe.local.feed.item.StreamItem
 import org.schabi.newpipe.local.feed.service.FeedEventManager
 import org.schabi.newpipe.local.feed.service.FeedEventManager.Event.ErrorResultEvent
 import org.schabi.newpipe.local.feed.service.FeedEventManager.Event.IdleEvent
 import org.schabi.newpipe.local.feed.service.FeedEventManager.Event.ProgressEvent
 import org.schabi.newpipe.local.feed.service.FeedEventManager.Event.SuccessResultEvent
+import org.schabi.newpipe.recommendation.LocalRecommendationEngine
 import org.schabi.newpipe.util.DEFAULT_THROTTLE_TIMEOUT
 import java.time.OffsetDateTime
 import java.util.concurrent.TimeUnit
@@ -59,17 +61,50 @@ class FeedViewModel(
         .subscribeOn(Schedulers.io())
         .observeOn(Schedulers.io())
         .map { (event, showPlayedItems, notLoadedCount, oldestUpdate, historyEntries) ->
+            var recommendationError: Throwable? = null
             val streamItems = if (event is SuccessResultEvent || event is IdleEvent) {
                 feedDatabaseManager
                     .getStreams(groupId, showPlayedItems)
                     .blockingGet(arrayListOf())
                     .let { streams ->
+                        val fetchedRecommendations = if (
+                            event is SuccessResultEvent && groupId == FeedGroupEntity.GROUP_ALL_ID
+                        ) {
+                            LocalRecommendationEngine(
+                                feedDatabaseManager.database().streamHistoryDAO()
+                            ).getRecommendedStreams()
+                                .map { items -> RecommendationFetchResult(items, null) }
+                                .onErrorReturn { error ->
+                                    Log.e(TAG, "Unable to fetch local-history recommendations", error)
+                                    RecommendationFetchResult(emptyList(), error)
+                                }
+                                .blockingGet()
+                        } else {
+                            RecommendationFetchResult(emptyList(), null)
+                        }
+                        recommendationError = fetchedRecommendations.error
+
+                        val currentKeys = streams.mapTo(mutableSetOf()) {
+                            "${it.stream.serviceId}\u0000${it.stream.url}"
+                        }
+                        val newRecommendationEntities = fetchedRecommendations.items
+                            .filterNot { "${it.serviceId}\u0000${it.url}" in currentKeys }
+                            .map(::StreamEntity)
+                        if (newRecommendationEntities.isNotEmpty()) {
+                            feedDatabaseManager.database().streamDAO().upsertAll(newRecommendationEntities)
+                        }
+                        val recommendationStreams = newRecommendationEntities.map {
+                            StreamWithState(it, null)
+                        }
+                        val allStreams = (recommendationStreams + streams).distinctBy {
+                            it.stream.uid
+                        }
                         val recommendedOrder = LocalRecommendationEngine(historyEntries)
-                            .rankStreams(streams.map { it.stream })
+                            .rankStreams(allStreams.map { it.stream })
                             .mapIndexed { index, stream -> stream.uid to index }
                             .toMap()
 
-                        streams.sortedBy { stream ->
+                        allStreams.sortedBy { stream ->
                             recommendedOrder[stream.stream.uid] ?: Int.MAX_VALUE
                         }
                     }
@@ -77,15 +112,22 @@ class FeedViewModel(
                 arrayListOf()
             }
 
-            CombineResultDataHolder(event, streamItems, notLoadedCount, oldestUpdate)
+            CombineResultDataHolder(
+                event, streamItems, notLoadedCount, oldestUpdate, recommendationError
+            )
         }
         .observeOn(AndroidSchedulers.mainThread())
-        .subscribe { (event, listFromDB, notLoadedCount, oldestUpdate) ->
+        .subscribe { (event, listFromDB, notLoadedCount, oldestUpdate, recommendationError) ->
             mutableStateLiveData.postValue(
                 when (event) {
                     is IdleEvent -> FeedState.LoadedState(listFromDB.map { e -> StreamItem(e) }, oldestUpdate, notLoadedCount)
                     is ProgressEvent -> FeedState.ProgressState(event.currentProgress, event.maxProgress, event.progressMessage)
-                    is SuccessResultEvent -> FeedState.LoadedState(listFromDB.map { e -> StreamItem(e) }, oldestUpdate, notLoadedCount, event.itemsErrors)
+                    is SuccessResultEvent -> FeedState.LoadedState(
+                        listFromDB.map { e -> StreamItem(e) },
+                        oldestUpdate,
+                        notLoadedCount,
+                        event.itemsErrors + listOfNotNull(recommendationError)
+                    )
                     is ErrorResultEvent -> FeedState.ErrorState(event.error)
                 }
             )
@@ -112,7 +154,13 @@ class FeedViewModel(
         val t1: FeedEventManager.Event,
         val t2: List<StreamWithState>,
         val t3: Long,
-        val t4: OffsetDateTime?
+        val t4: OffsetDateTime?,
+        val recommendationError: Throwable?
+    )
+
+    private data class RecommendationFetchResult(
+        val items: List<org.schabi.newpipe.extractor.stream.StreamInfoItem>,
+        val error: Throwable?
     )
 
     fun togglePlayedItems(showPlayedItems: Boolean) {
@@ -128,6 +176,8 @@ class FeedViewModel(
     fun getShowPlayedItemsFromPreferences() = getShowPlayedItemsFromPreferences(applicationContext)
 
     companion object {
+        private const val TAG = "FeedViewModel"
+
         private fun getShowPlayedItemsFromPreferences(context: Context) =
             PreferenceManager.getDefaultSharedPreferences(context)
                 .getBoolean(context.getString(R.string.feed_show_played_items_key), true)

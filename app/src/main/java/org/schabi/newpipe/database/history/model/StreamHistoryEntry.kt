@@ -18,11 +18,29 @@ data class StreamHistoryEntry(
     val accessDate: OffsetDateTime,
 
     @ColumnInfo(name = StreamHistoryEntity.STREAM_REPEAT_COUNT)
-    val repeatCount: Long
+    val repeatCount: Long,
+
+    @ColumnInfo(name = StreamHistoryEntity.STREAM_CHANNEL_ID)
+    val channelId: String?,
+
+    @ColumnInfo(name = StreamHistoryEntity.STREAM_CHANNEL_URL)
+    val channelUrl: String?,
+
+    @ColumnInfo(name = StreamHistoryEntity.STREAM_TAGS)
+    val tagsJson: String?,
+
+    @ColumnInfo(name = StreamHistoryEntity.STREAM_LAST_POSITION_MS)
+    val lastPositionMs: Long,
+
+    @ColumnInfo(name = StreamHistoryEntity.STREAM_COMPLETION_RATIO)
+    val completionRatio: Double
 ) {
 
     fun toStreamHistoryEntity(): StreamHistoryEntity {
-        return StreamHistoryEntity(streamId, accessDate, repeatCount)
+        return StreamHistoryEntity(
+            streamId, accessDate, repeatCount, channelId, channelUrl,
+            tagsJson, lastPositionMs, completionRatio
+        )
     }
 
     fun hasEqualValues(other: StreamHistoryEntry): Boolean {

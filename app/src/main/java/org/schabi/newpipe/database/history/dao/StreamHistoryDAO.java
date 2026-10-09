@@ -54,6 +54,15 @@ public abstract class StreamHistoryDAO implements HistoryDAO<StreamHistoryEntity
             + " ORDER BY " + STREAM_ACCESS_DATE + " DESC")
     public abstract Flowable<List<StreamHistoryEntry>> getHistory();
 
+    @RewriteQueriesToDropUnusedColumns
+    @Query("SELECT * FROM " + STREAM_TABLE
+            + " INNER JOIN " + STREAM_HISTORY_TABLE
+            + " ON " + STREAM_ID + " = " + JOIN_STREAM_ID
+            + " WHERE " + STREAM_ACCESS_DATE + " >= :since"
+            + " ORDER BY " + STREAM_ACCESS_DATE + " DESC")
+    public abstract List<StreamHistoryEntry> getRecommendationHistory(
+            java.time.OffsetDateTime since);
+
 
     @RewriteQueriesToDropUnusedColumns
     @Query("SELECT * FROM " + STREAM_TABLE

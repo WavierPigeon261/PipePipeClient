@@ -26,8 +26,11 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Typeface
 import android.graphics.drawable.LayerDrawable
+import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.os.Parcelable
+import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
@@ -404,6 +407,21 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         } else if (item.itemId == R.id.action_search_feed) {
             setupSearchInActionBar()
             return true
+        } else if (item.itemId == R.id.action_feed_notifications) {
+            val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, requireContext().packageName)
+            } else {
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.fromParts("package", requireContext().packageName, null)
+                )
+            }
+            startActivity(intent)
+            return true
+        } else if (item.itemId == R.id.action_feed_settings) {
+            org.schabi.newpipe.util.NavigationHelper.openSettings(requireContext())
+            return true
         }
 
         return super.onOptionsItemSelected(item)
@@ -748,10 +766,14 @@ class FeedFragment : BaseStateFragment<FeedState>() {
 
     @SuppressLint("StringFormatMatches")
     private fun handleLoadedState(loadedState: FeedState.LoadedState) {
-        val itemVersion = when (getItemViewMode(requireContext())) {
-            ItemViewMode.GRID -> StreamItem.ItemVersion.GRID
-            ItemViewMode.CARD -> StreamItem.ItemVersion.CARD
-            else -> StreamItem.ItemVersion.NORMAL
+        val itemVersion = if (groupId == FeedGroupEntity.GROUP_ALL_ID) {
+            StreamItem.ItemVersion.CARD
+        } else {
+            when (getItemViewMode(requireContext())) {
+                ItemViewMode.GRID -> StreamItem.ItemVersion.GRID
+                ItemViewMode.CARD -> StreamItem.ItemVersion.CARD
+                else -> StreamItem.ItemVersion.NORMAL
+            }
         }
         loadedState.items.forEach { it.itemVersion = itemVersion }
 
