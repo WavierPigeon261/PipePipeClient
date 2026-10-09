@@ -67,6 +67,9 @@ data class StreamEntity(
     var isPaid: Boolean = false
 ) : Serializable {
     @Ignore
+    var uploaderAvatarUrl: String? = null
+
+    @Ignore
     constructor(item: StreamInfoItem) : this(
         serviceId = item.serviceId, url = item.url, title = item.name,
         streamType = item.streamType, duration = item.duration, uploader = item.uploaderName ?: "",
@@ -74,7 +77,9 @@ data class StreamEntity(
         textualUploadDate = item.textualUploadDate, uploadDate = item.uploadDate?.offsetDateTime(),
         isUploadDateApproximation = item.uploadDate?.isApproximation,
         isPaid = item.requiresMembership()
-    )
+    ) {
+        uploaderAvatarUrl = item.uploaderAvatarUrl
+    }
 
     @Ignore
     constructor(info: StreamInfo) : this(
@@ -84,7 +89,9 @@ data class StreamEntity(
         textualUploadDate = info.textualUploadDate, uploadDate = info.uploadDate?.offsetDateTime(),
         isUploadDateApproximation = info.uploadDate?.isApproximation,
         isPaid = info.requiresMembership()
-    )
+    ) {
+        uploaderAvatarUrl = info.uploaderAvatarUrl
+    }
 
     @Ignore
     constructor(item: PlayerMediaItem) : this(
@@ -98,6 +105,7 @@ data class StreamEntity(
         item.duration = duration
         item.uploaderName = uploader
         item.uploaderUrl = uploaderUrl
+        item.uploaderAvatarUrl = uploaderAvatarUrl
         item.thumbnailUrl = thumbnailUrl
 
         if (viewCount != null) item.viewCount = viewCount as Long

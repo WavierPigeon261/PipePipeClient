@@ -108,6 +108,8 @@ data class StreamItem(
 
         PicassoHelper.loadScaledDownThumbnail(viewBinding.root.context, stream.thumbnailUrl)
             .into(viewBinding.itemThumbnailView)
+        PicassoHelper.loadAvatar(stream.uploaderAvatarUrl)
+            .into(viewBinding.itemChannelAvatarView)
 
         viewBinding.itemAdditionalDetails.text =
             getStreamInfoDetailLine(viewBinding.itemAdditionalDetails.context)
