@@ -75,6 +75,15 @@
     <style name="Base.DarkTheme" parent="Base.V19.DarkTheme" />
     <style name="DarkTheme" parent="Base.DarkTheme"/>
 
+    <style name="FeedLightThemeOverlay" parent="ThemeOverlay.AppCompat.Light">
+        <item name="colorPrimary">#FFFFFF</item>
+        <item name="colorPrimaryDark">#FFFFFF</item>
+        <item name="colorAccent">#FF0000</item>
+        <item name="android:colorBackground">#FFFFFF</item>
+        <item name="android:textColorPrimary">#0F0F0F</item>
+        <item name="android:textColorSecondary">#606060</item>
+    </style>
+
     <!-- Black Theme -->
     <style name="Base.V19.BlackTheme" parent="DarkTheme">
         <item name="android:windowBackground">@color/black_background_color</item>

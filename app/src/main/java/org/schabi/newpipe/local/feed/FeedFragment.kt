@@ -62,6 +62,7 @@ import org.schabi.newpipe.NewPipeDatabase
 import org.schabi.newpipe.R
 import org.schabi.newpipe.database.feed.model.FeedGroupEntity
 import org.schabi.newpipe.database.subscription.SubscriptionEntity
+import org.schabi.newpipe.database.stream.model.StreamEntity
 import org.schabi.newpipe.databinding.FragmentFeedBinding
 import org.schabi.newpipe.databinding.PlaylistControlBinding
 import org.schabi.newpipe.error.ErrorInfo
@@ -77,6 +78,8 @@ import org.schabi.newpipe.info_list.dialog.InfoItemDialog
 import org.schabi.newpipe.ktx.animate
 import org.schabi.newpipe.ktx.animateHideRecyclerViewAllowingScrolling
 import org.schabi.newpipe.ktx.slideUp
+import org.schabi.newpipe.local.feed.item.FeedHeaderItem
+import org.schabi.newpipe.local.feed.item.FeedShortsItem
 import org.schabi.newpipe.local.feed.item.StreamItem
 import org.schabi.newpipe.local.feed.service.FeedLoadService
 import org.schabi.newpipe.local.subscription.SubscriptionManager
@@ -91,6 +94,7 @@ import org.schabi.newpipe.util.ThemeHelper.getGridSpanCountStreams
 import org.schabi.newpipe.util.ThemeHelper.getItemViewMode
 import org.schabi.newpipe.util.ThemeHelper.resolveDrawable
 import org.schabi.newpipe.util.ThemeHelper.shouldUseGridLayout
+import org.schabi.newpipe.util.StreamTypeUtil
 import java.time.OffsetDateTime
 import java.util.function.Consumer
 
@@ -128,12 +132,15 @@ class FeedFragment : BaseStateFragment<FeedState>() {
     private var originalItems = mutableListOf<StreamItem>()
     private var filteredItems = mutableListOf<StreamItem>()
     private var isFilterEnabled = false
+    private var searchFilterText = ""
+    private var selectedCategory = ""
     private var isPullToRefreshEnabled = true
 
     private val textWatcher = object : TextWatcher {
         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+            selectedCategory = getString(R.string.feed_category_all)
             filterItems(s.toString())
         }
 
@@ -227,6 +234,9 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         })
 
         feedBinding.itemsList.adapter = groupAdapter
+        selectedCategory = getString(R.string.feed_category_all)
+        feedBinding.feedBottomNavigation.root.isVisible =
+            groupId == FeedGroupEntity.GROUP_ALL_ID
         setupListViewMode()
     }
 
@@ -274,6 +284,18 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         feedBinding.newItemsLoadedButton.setOnClickListener {
             hideNewItemsLoaded(true)
             feedBinding.itemsList.scrollToPosition(0)
+        }
+        feedBinding.feedBottomNavigation.feedNavHome.setOnClickListener {
+            feedBinding.itemsList.smoothScrollToPosition(0)
+        }
+        feedBinding.feedBottomNavigation.feedNavSubscriptions.setOnClickListener {
+            NavigationHelper.openSubscriptionFragment(fm)
+        }
+        feedBinding.feedBottomNavigation.feedNavLibrary.setOnClickListener {
+            NavigationHelper.openBookmarksFragment(fm)
+        }
+        feedBinding.feedBottomNavigation.feedNavPlayer.setOnClickListener {
+            NavigationHelper.expandMainPlayer(requireContext())
         }
         setupPlaylistControlListeners()
         updateSwipeRefreshListener()
@@ -382,8 +404,14 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         super.onCreateOptionsMenu(menu, inflater)
 
         activity.supportActionBar?.setDisplayShowTitleEnabled(true)
-        if (groupName == ""){
-            activity.supportActionBar?.setTitle(R.string.fragment_feed_title)
+        if (groupName == "") {
+            activity.supportActionBar?.setTitle(
+                if (groupId == FeedGroupEntity.GROUP_ALL_ID) {
+                    R.string.feed_brand_title
+                } else {
+                    R.string.fragment_feed_title
+                }
+            )
         } else {
             activity.supportActionBar?.title = groupName
         }
@@ -580,27 +608,28 @@ class FeedFragment : BaseStateFragment<FeedState>() {
     }
 
     private fun filterItems(text: String) {
-        isFilterEnabled = text.isNotEmpty()
+        searchFilterText = text
+        val allCategory = getString(R.string.feed_category_all)
+        isFilterEnabled = text.isNotEmpty() || selectedCategory != allCategory
         filteredItems.clear()
 
-        if (text.isEmpty()) {
-            filteredItems.addAll(originalItems)
-        } else {
-            for (item in originalItems) {
-                val stream = item.streamWithState.stream
-                if (stream.title.lowercase().contains(text.lowercase()) ||
-                    stream.uploader.lowercase().contains(text.lowercase()) == true) {
-                    filteredItems.add(item)
-                }
-            }
-        }
+        filteredItems.addAll(originalItems.filter { item ->
+            val stream = item.streamWithState.stream
+            val searchMatches = text.isBlank() ||
+                stream.title.contains(text, ignoreCase = true) ||
+                stream.uploader.contains(text, ignoreCase = true)
+            searchMatches && matchesCategory(item, selectedCategory)
+        })
 
         // Use synchronous update to avoid race conditions during rapid filtering
         try {
-            groupAdapter.update(if (isFilterEnabled) filteredItems else originalItems)
+            groupAdapter.update(createDisplayItems(if (isFilterEnabled) filteredItems else originalItems))
         } catch (e: Exception) {
             // Fallback to async if needed
-            groupAdapter.updateAsync(if (isFilterEnabled) filteredItems else originalItems, null)
+            groupAdapter.updateAsync(
+                createDisplayItems(if (isFilterEnabled) filteredItems else originalItems),
+                null
+            )
         }
 
         // Always scroll to top when filter changes
@@ -609,16 +638,72 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         }
     }
 
+    private fun matchesCategory(item: StreamItem, category: String): Boolean {
+        val stream = item.streamWithState.stream
+        val text = "${stream.title} ${stream.uploader}".lowercase()
+        return when (category) {
+            getString(R.string.feed_category_all) -> true
+            getString(R.string.feed_category_gaming) ->
+                listOf("game", "gaming", "playthrough", "esports").any { text.contains(it) }
+            getString(R.string.feed_category_technology) ->
+                listOf("tech", "android", "code", "software", "programming").any { text.contains(it) }
+            getString(R.string.feed_category_podcasts) ->
+                listOf("podcast", "interview", "episode").any { text.contains(it) }
+            getString(R.string.feed_category_music) ->
+                listOf("music", "song", "audio", "lofi").any { text.contains(it) }
+            getString(R.string.feed_category_live) -> StreamTypeUtil.isLiveStream(stream.streamType)
+            getString(R.string.feed_category_privacy) ->
+                listOf("privacy", "security", "anonymous", "tracking").any { text.contains(it) }
+            else -> true
+        }
+    }
+
+    private fun createDisplayItems(streams: List<StreamItem>): List<Item<*>> {
+        if (groupId != FeedGroupEntity.GROUP_ALL_ID) {
+            return streams
+        }
+
+        val displayItems = mutableListOf<Item<*>>(
+            FeedHeaderItem(selectedCategory, ::onFeedCategorySelected)
+        )
+        if (streams.isNotEmpty()) {
+            displayItems.add(streams.first())
+            val shortCandidates = streams.asSequence()
+                .map { it.streamWithState.stream }
+                .filter { it.duration in 1..180 }
+                .take(5)
+                .toList()
+            if (shortCandidates.isNotEmpty()) {
+                displayItems.add(FeedShortsItem(shortCandidates, ::openFeedStream))
+            }
+            displayItems.addAll(streams.drop(1))
+        }
+        return displayItems
+    }
+
+    private fun onFeedCategorySelected(category: String) {
+        selectedCategory = category
+        filterItems(searchFilterText)
+    }
+
+    private fun openFeedStream(stream: StreamEntity) {
+        NavigationHelper.openVideoDetailFragment(
+            requireContext(), fm, stream.serviceId, stream.url, stream.title, null, false
+        )
+    }
+
     private fun clearFilter() {
         isFilterEnabled = false
+        searchFilterText = ""
+        selectedCategory = getString(R.string.feed_category_all)
         filteredItems.clear()
         // Cancel any ongoing diff operations before starting a new one
         try {
             // Update synchronously to avoid race conditions
-            groupAdapter.update(originalItems)
+            groupAdapter.update(createDisplayItems(originalItems))
         } catch (e: Exception) {
             // Fallback to async with proper synchronization
-            groupAdapter.updateAsync(originalItems, null)
+            groupAdapter.updateAsync(createDisplayItems(originalItems), null)
         }
         // Always scroll to top when clearing filter
         feedBinding.itemsList.post {
@@ -739,7 +824,7 @@ class FeedFragment : BaseStateFragment<FeedState>() {
 
                 if (autoBackgroundPlaying) {
                     // Find the index of the clicked item
-                    val clickedIndex = groupAdapter.getAdapterPosition(item)
+                    val clickedIndex = originalItems.indexOf(item).coerceAtLeast(0)
                     val playQueue = getPlayQueue(clickedIndex)
 
                     if (randomBackgroundPlaying) {
@@ -788,7 +873,7 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         // This need to be saved in a variable as the update occurs async
         val oldOldestSubscriptionUpdate = oldestSubscriptionUpdate
 
-        groupAdapter.updateAsync(loadedState.items, false) {
+        groupAdapter.updateAsync(createDisplayItems(loadedState.items), false) {
             oldOldestSubscriptionUpdate?.run {
                 highlightNewItemsAfter(oldOldestSubscriptionUpdate)
             }
@@ -970,7 +1055,7 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         var doCheck = true
 
         for (i in 0 until groupAdapter.itemCount) {
-            val item = groupAdapter.getItem(i) as StreamItem
+            val item = groupAdapter.getItem(i) as? StreamItem ?: continue
 
             var typeface = Typeface.DEFAULT
             var backgroundSupplier = { ctx: Context ->
