@@ -184,26 +184,26 @@ public class HistoryRecordManager {
         return Maybe.fromCallable(() -> {
             final OffsetDateTime currentTime = OffsetDateTime.now(ZoneOffset.UTC);
             return database.runInTransaction(() -> {
-            final long streamId = streamTable.upsert(new StreamEntity(info));
-            final StreamHistoryEntity latestEntry = streamHistoryTable.getLatestEntry(streamId);
+                final long streamId = streamTable.upsert(new StreamEntity(info));
+                final StreamHistoryEntity latestEntry = streamHistoryTable.getLatestEntry(streamId);
 
-            if (latestEntry != null) {
-                latestEntry.setAccessDate(currentTime);
-                if (channelId != null) {
-                    latestEntry.setChannelId(channelId);
+                if (latestEntry != null) {
+                    latestEntry.setAccessDate(currentTime);
+                    if (channelId != null) {
+                        latestEntry.setChannelId(channelId);
+                    }
+                    if (channelUrl != null) {
+                        latestEntry.setChannelUrl(channelUrl);
+                    }
+                    if (tagsJson != null) {
+                        latestEntry.setTagsJson(tagsJson);
+                    }
+                    latestEntry.setLastPositionMs(watchedMs);
+                    latestEntry.setCompletionRatio(completionRatio);
+                    return streamHistoryTable.update(latestEntry) > 0 ? streamId : 0L;
                 }
-                if (channelUrl != null) {
-                    latestEntry.setChannelUrl(channelUrl);
-                }
-                if (tagsJson != null) {
-                    latestEntry.setTagsJson(tagsJson);
-                }
-                latestEntry.setLastPositionMs(watchedMs);
-                latestEntry.setCompletionRatio(completionRatio);
-                return streamHistoryTable.update(latestEntry) > 0 ? streamId : 0L;
-            }
 
-            return streamHistoryTable.insert(new StreamHistoryEntity(
+                return streamHistoryTable.insert(new StreamHistoryEntity(
                     streamId,
                     currentTime,
                     1,
@@ -212,9 +212,9 @@ public class HistoryRecordManager {
                     tagsJson,
                     watchedMs,
                     completionRatio
-            ));
-        });
-    })).subscribeOn(Schedulers.io());
+                ));
+            });
+        }).subscribeOn(Schedulers.io());
 
     public Completable deleteStreamHistoryAndState(final long streamId) {
         return Completable.fromAction(() -> database.runInTransaction(() -> {
