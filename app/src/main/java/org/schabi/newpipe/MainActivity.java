@@ -792,7 +792,7 @@ public class MainActivity extends AppCompatActivity {
 
             handleIntent(getIntent());
         } else {
-            NavigationHelper.gotoMainFragment(getSupportFragmentManager());
+            NavigationHelper.openFeedFragment(getSupportFragmentManager());
         }
     }
 
